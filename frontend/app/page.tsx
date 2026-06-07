@@ -58,7 +58,7 @@ export default function LibraryPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-24">
-      <h1 className="text-4xl font-medium tracking-tight mb-12 italic">library</h1>
+      <h1 className="text-4xl font-medium tracking-tight mb-12 italic">my library</h1>
 
       {docs === null ? (
         <p className="opacity-50 italic">loading…</p>
