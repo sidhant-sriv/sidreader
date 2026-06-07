@@ -36,6 +36,7 @@ export default function ReaderPage() {
   const [endPage, setEndPage] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [peekOpen, setPeekOpen] = useState(false);
   const indexRef = useRef(index);
   indexRef.current = index;
 
@@ -146,6 +147,9 @@ export default function ReaderPage() {
       } else if (e.key === "g" || e.key === "G") {
         e.preventDefault();
         setJumpDraft(String(indexRef.current + 1));
+      } else if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        setPeekOpen((v) => !v);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -240,12 +244,28 @@ export default function ReaderPage() {
           <span className="ml-auto truncate opacity-60 italic">
             {doc?.filename}
           </span>
+
+          {mode === "cards" && (
+            <button
+              onClick={() => setPeekOpen((v) => !v)}
+              className={`border border-[var(--rule)] hover:border-[var(--ink)] px-3 py-1 rounded-sm ${
+                peekOpen ? "bg-[var(--ink)] text-[var(--paper)] border-[var(--ink)]" : ""
+              }`}
+              title="toggle PDF side view (P)"
+            >
+              {peekOpen ? "hide page" : "peek page"}
+            </button>
+          )}
         </div>
       </header>
 
       {/* Card pane */}
       {mode === "cards" && (
-        <section className="min-h-screen flex items-center justify-center px-6 py-32">
+        <section
+          className={`min-h-screen flex items-center justify-center px-6 py-32 transition-[margin] duration-200 ${
+            peekOpen ? "mr-[42vw]" : "mr-0"
+          }`}
+        >
           {loading ? (
             <p className="opacity-50 italic">loading…</p>
           ) : error ? (
@@ -261,6 +281,36 @@ export default function ReaderPage() {
             </article>
           )}
         </section>
+      )}
+
+      {/* Side peek: PDF page mirroring the current chunk */}
+      {mode === "cards" && (
+        <aside
+          className={`fixed top-[3.25rem] right-0 bottom-0 w-[42vw] border-l border-[var(--rule)] bg-[var(--paper)] transition-transform duration-200 z-10 ${
+            peekOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--rule)] text-xs uppercase tracking-[0.15em]">
+            <span className="opacity-60 italic">
+              page {card?.page_number ?? "—"}
+            </span>
+            <button
+              onClick={() => setPeekOpen(false)}
+              className="opacity-60 hover:opacity-100"
+              title="collapse (P)"
+            >
+              close ✕
+            </button>
+          </div>
+          {card?.page_number != null && peekOpen && (
+            <iframe
+              key={card.page_number}
+              title="PDF page peek"
+              src={fileUrl(docId, card.page_number)}
+              className="w-full h-[calc(100%-2.25rem)] bg-[var(--paper)]"
+            />
+          )}
+        </aside>
       )}
 
       {/* PDF pane */}

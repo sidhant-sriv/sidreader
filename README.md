@@ -8,6 +8,11 @@ Stuff to add
 - [ ] Add a search bar to filter the cards by title or content
 - [ ] Add a save chunk for later
 - [ ] Add a "mark as read" button to each card to help users keep track of what they've already read
+- [ ] Cache and store notes
+
+- [ ] Share chunk
+
+- [ ] Mobile support
 
 - [ ] Take inspiration from reader mode. 
 - [ ] Support image showing
