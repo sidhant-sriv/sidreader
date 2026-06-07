@@ -6,5 +6,7 @@ dist/
 build/
 sidreader.egg-info/
 .vscode
+uploads/
+*.db
 
 

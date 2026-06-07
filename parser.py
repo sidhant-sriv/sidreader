@@ -144,6 +144,43 @@ def parse_page(book: Book, page_num: int, max_chars: int = 1000) -> ParsingResul
     return chunks, len(chunks)
 
 
+def _split_long_paragraph(para: _Para, max_chars: int) -> list[Page]:
+    out: list[Page] = []
+    buf: list[str] = []
+    buf_len = 0
+    for sentence in split_sentences(para.text):
+        add = len(sentence) + (1 if buf else 0)
+        if buf and buf_len + add > max_chars:
+            out.append(Page(text=" ".join(buf), page_number=para.page_number))
+            buf, buf_len = [], 0
+        buf.append(sentence)
+        buf_len += add
+    if buf:
+        out.append(Page(text=" ".join(buf), page_number=para.page_number))
+    return out
+
+
+def _cards_from_paragraphs(paras: list[_Para], max_chars: int | None) -> ChunkList:
+    chunks: ChunkList = []
+    for para in paras:
+        if max_chars and len(para.text) > max_chars:
+            chunks.extend(_split_long_paragraph(para, max_chars))
+        else:
+            chunks.append(Page(text=para.text, page_number=para.page_number))
+    return chunks
+
+
+def parse_page_cards(
+    book: Book, page_num: int, max_chars: int | None = 1500
+) -> ParsingResult:
+    page = book.get_page(page_num)
+    if not page:
+        return [], 0
+    paras = [_Para(text=p, page_number=page_num) for p in detect_paragraphs(page.text)]
+    chunks = _cards_from_paragraphs(paras, max_chars)
+    return chunks, len(chunks)
+
+
 def parse_book(
     book: Book,
     start_page: int = 1,
@@ -174,4 +211,37 @@ def parse_book(
         paras.extend(_Para(text=p, page_number=page_num) for p in page_paras)
 
     chunks = _pack(paras, max_chars)
+    return chunks, len(chunks)
+
+
+def parse_book_cards(
+    book: Book,
+    start_page: int = 1,
+    end_page: int | None = None,
+    max_chars: int | None = 1500,
+) -> ParsingResult:
+    if end_page is None:
+        end_page = book.last_page_num
+
+    paras: list[_Para] = []
+    for page_num in range(start_page, end_page + 1):
+        page = book.get_page(page_num)
+        if not page:
+            continue
+        page_paras = detect_paragraphs(page.text)
+        if not page_paras:
+            continue
+
+        if paras and page_paras:
+            prev = paras[-1].text.rstrip()
+            nxt = page_paras[0].lstrip()
+            prev_open = not prev.endswith((".", "!", "?", '"', "”", ":"))
+            nxt_cont = bool(nxt) and not nxt[:1].isupper()
+            if prev_open and nxt_cont:
+                paras[-1].text = f"{prev} {nxt}".strip()
+                page_paras = page_paras[1:]
+
+        paras.extend(_Para(text=p, page_number=page_num) for p in page_paras)
+
+    chunks = _cards_from_paragraphs(paras, max_chars)
     return chunks, len(chunks)
