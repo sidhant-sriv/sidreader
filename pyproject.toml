@@ -1,0 +1,19 @@
+[project]
+name = "sidreader"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "sidhant-sriv",email = "sidhant.sriv@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+dependencies = [
+    "pdfplumber (>=0.11.9,<0.12.0)",
+    "spacy (>=3.8.14,<4.0.0)",
+    "spacy-layout (>=0.0.12,<0.0.13)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

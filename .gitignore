@@ -1,0 +1,10 @@
+*.pyc
+*.pdf
+poetry.lock
+__pycache__/
+dist/
+build/
+sidreader.egg-info/
+
+
+
