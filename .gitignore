@@ -5,6 +5,6 @@ __pycache__/
 dist/
 build/
 sidreader.egg-info/
-
+.vscode
 
 

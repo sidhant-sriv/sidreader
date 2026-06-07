@@ -175,12 +175,3 @@ def parse_book(
 
     chunks = _pack(paras, max_chars)
     return chunks, len(chunks)
-
-
-if __name__ == "__main__":
-    book = load_book("doc.pdf")
-    chunks, count = parse_page(book, 5, max_chars=300)
-    print(f" {count} chunks\n")
-    for i, chunk in enumerate(chunks, 1):
-        print(f"{i}: {chunk.text}")
-        print("-" * 40)
