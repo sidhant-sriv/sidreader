@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f6f1e7;
+  --ink: #1a1a1a;
+  --rule: rgba(26, 26, 26, 0.15);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-rule: var(--rule);
+  --font-sans: var(--font-lora);
+  --font-serif: var(--font-lora);
+}
+
+html, body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-lora), Georgia, serif;
+}
+
+button {
+  cursor: pointer;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

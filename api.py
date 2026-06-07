@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager, closing
 from enum import Enum
 
 from fastapi import Body, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 
 import db
 from loader import load_book
@@ -85,7 +86,7 @@ async def parse(
     max_chars: int = Query(1500, gt=0),
     group_by_page: bool = Query(False),
     offset: int = Query(0, ge=0),
-    limit: int = Query(50, gt=0, le=500),
+    limit: int = Query(50, gt=0, le=5000),
 ):
     suffix = os.path.splitext(file.filename or "")[1] or ".pdf"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -112,7 +113,7 @@ def parse_path(
     max_chars: int = Query(1500, gt=0),
     group_by_page: bool = Query(False),
     offset: int = Query(0, ge=0),
-    limit: int = Query(50, gt=0, le=500),
+    limit: int = Query(50, gt=0, le=5000),
 ):
     if not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
@@ -132,7 +133,7 @@ def parse_single_page(
     mode: Mode = Query(Mode.cards),
     max_chars: int = Query(1500, gt=0),
     offset: int = Query(0, ge=0),
-    limit: int = Query(50, gt=0, le=500),
+    limit: int = Query(50, gt=0, le=5000),
 ):
     if not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
@@ -198,6 +199,22 @@ def get_document(doc_id: str):
     return row
 
 
+@app.get("/documents/{doc_id}/file")
+def get_document_file(doc_id: str):
+    with closing(db.get_conn()) as conn:
+        row = db.get_document(conn, doc_id)
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
+    if not os.path.isfile(row["path"]):
+        raise HTTPException(status_code=410, detail="Document file is missing on disk")
+    return FileResponse(
+        row["path"],
+        media_type="application/pdf",
+        filename=row["filename"],
+        content_disposition_type="inline",
+    )
+
+
 @app.patch("/documents/{doc_id}/position")
 def update_position(doc_id: str, card_index: int = Body(..., embed=True, ge=0)):
     with closing(db.get_conn()) as conn:
@@ -213,8 +230,9 @@ def document_cards(
     start_page: int = Query(1, ge=1),
     end_page: int | None = Query(None, ge=1),
     max_chars: int = Query(1500, gt=0),
+    group_by_page: bool = Query(False),
     offset: int = Query(0, ge=0),
-    limit: int = Query(50, gt=0, le=500),
+    limit: int = Query(50, gt=0, le=5000),
 ):
     with closing(db.get_conn()) as conn:
         row = db.touch_document(conn, doc_id)
@@ -227,5 +245,33 @@ def document_cards(
     chunks, _ = parse_book_cards(
         book, start_page=start_page, end_page=end_page, max_chars=max_chars
     )
+    return {"document": row, **_build_response(chunks, group_by_page, offset, limit)}
+
+
+@app.get("/documents/{doc_id}/pages/{page_num}/cards")
+def document_page_cards(
+    doc_id: str,
+    page_num: int,
+    max_chars: int = Query(1500, gt=0),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, gt=0, le=5000),
+):
+    with closing(db.get_conn()) as conn:
+        row = db.touch_document(conn, doc_id)
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
+    if not os.path.isfile(row["path"]):
+        raise HTTPException(status_code=410, detail="Document file is missing on disk")
+
+    book = load_book(row["path"])
+    if not book.get_page(page_num):
+        raise HTTPException(status_code=404, detail=f"Page {page_num} not found")
+
+    chunks, _ = parse_page_cards(book, page_num, max_chars=max_chars)
     sliced, pagination = _paginate(_serialize(chunks), offset, limit)
-    return {"document": row, "pagination": pagination, "chunks": sliced}
+    return {
+        "document": row,
+        "page_number": page_num,
+        "pagination": pagination,
+        "chunks": sliced,
+    }
